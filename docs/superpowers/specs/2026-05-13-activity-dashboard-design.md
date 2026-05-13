@@ -1,20 +1,18 @@
 # activity-dashboard — Design Spec
 
 **Date:** 2026-05-13
-**Author:** Sebastien (with Claude as architect)
-**Target:** 24-hour MVP
 
 ## 1. Overview
 
-A local command-line tool that aggregates recent activity for one *subject* (Sebastien or one of his direct reports) across the team's primary tools, and renders a single static HTML report. The report shows three intent-based buckets at a glance plus a per-source feed for digging in.
+A local command-line tool that aggregates recent activity for one *subject* (the user themself, or someone they manage) across the team's primary tools, and renders a single static HTML report. The report shows three intent-based buckets at a glance plus a per-source feed for digging in.
 
-The dashboard is a personal tool, not a service. It runs on Sebastien's laptop, uses his credentials, and never sends data to a third party.
+The dashboard is a personal tool, not a service. It runs on the user's laptop, uses their credentials, and never sends data to a third party.
 
 ## 2. Goals & non-goals
 
 ### Goals
 - One command, one HTML file, opens in a browser, looks clean.
-- Truthful: never shows data Sebastien couldn't already see manually in the underlying tools.
+- Truthful: never shows data the user couldn't already see manually in the underlying tools.
 - Deterministic: same inputs → same buckets. No LLM, no random ranking.
 - Extensible: adding a fifth source later is a single new module.
 - Resilient: one source failing doesn't break the whole report.
@@ -28,9 +26,9 @@ The dashboard is a personal tool, not a service. It runs on Sebastien's laptop, 
 
 ## 3. Users & lens
 
-- **Operator:** Sebastien. Always the authenticated principal.
+- **Operator:** the user. Always the authenticated principal.
 - **Subject:** specified via `--subject <name>` flag. Looked up in config to resolve to per-system identifiers.
-- All API queries use Sebastien's credentials. When subject ≠ Sebastien, the query parameters (assignee, author, reviewer, etc.) are scoped to the subject's identifiers — but the *access scope* is still Sebastien's (e.g. Gmail searches happen in Sebastien's inbox regardless of subject).
+- All API queries use the user's credentials. When the subject is someone else (e.g. a direct report), the query parameters (assignee, author, reviewer, etc.) are scoped to that subject's identifiers — but the *access scope* is still the user's (e.g. Gmail searches happen in the user's inbox regardless of subject).
 
 ## 4. UI design
 
@@ -81,7 +79,7 @@ Single YAML file. Default location: `~/.config/activity-dashboard/config.yaml`. 
 ### 5.1 Schema
 
 ```yaml
-# Paths to Sebastien's credentials.
+# Paths to the user's credentials.
 credentials:
   github_token_file: ~/.config/activity-dashboard/github.token       # optional, for rate limits
   jira:
@@ -103,12 +101,12 @@ rules:
 
 # Subjects the dashboard can be run against.
 subjects:
-  sebastien:
-    display_name: Sebastien Bacher
-    canonical_email: sebastien.bacher@canonical.com
-    ubuntu_alias: sebastien.bacher@ubuntu.com   # optional, reserved for future Gmail adapter
-    launchpad_id: seb128
-    github_id: seb128
+  me:
+    display_name: Your Name
+    canonical_email: you@canonical.com
+    ubuntu_alias: you@ubuntu.com   # optional, reserved for future Gmail adapter
+    launchpad_id: your-lp-id
+    github_id: your-gh-id
     one_on_one_doc: https://docs.google.com/document/d/XXXX/edit   # self — likely unused
   alice:
     display_name: Alice Smith
@@ -123,7 +121,7 @@ The YAML file is gitignored; the example shipped in the repo is `config.example.
 
 ### 5.2 Token files
 
-Each token file is a single line of text. Sebastien generates and places them manually. The tool never writes them (except `google-token.json`, which the OAuth library refreshes on its own).
+Each token file is a single line of text. The user generates and places them manually. The tool never writes them (except `google-token.json`, which the OAuth library refreshes on its own).
 
 ## 6. Data model
 
@@ -178,7 +176,7 @@ No abstract base class. Tests stub these as plain functions.
 ### 7.2 Launchpad adapter
 
 - Library: `launchpadlib`.
-- Auth: anonymous read OK for public bugs and MPs; OAuth for private data (use Sebastien's cached credentials if present).
+- Auth: anonymous read OK for public bugs and MPs; OAuth for private data (use the user's cached credentials if present).
 - Queries:
   - Bugs where `subject.launchpad_id` is assignee, reporter, or commenter in `window_days`.
   - Merge proposals where `subject.launchpad_id` is registrant or reviewer.
@@ -197,7 +195,7 @@ No abstract base class. Tests stub these as plain functions.
 ### 7.4 Google Docs (1-1 notes) adapter
 
 - Library: `google-api-python-client` (Docs API).
-- Auth: OAuth (Sebastien runs an installed-app flow first time; token cached).
+- Auth: OAuth (the user runs an installed-app flow first time; token cached).
 - Behavior:
   - Resolve `subject.one_on_one_doc` (URL or ID) to a document ID.
   - Fetch the document structure.
@@ -242,7 +240,7 @@ Decision logic per source:
 | GitHub PR (reviewer) | — | — | always → "awaiting your review" once age ≥ `pr_awaiting_review_days` (default 0 = immediately) |
 | Jira ticket (assignee) | status transitioned to Done/Closed/Resolved in window | "In Progress" or "In Review" with activity in window | "In Progress" with no movement > `stalled_jira_days`; or any status with no movement > `jira_assigned_no_movement_days` |
 | Launchpad bug | Fix Released / Fix Committed in window | status updates or comments in window | open, no comment > `stalled_launchpad_days` |
-| Launchpad MP | Approved / Merged / Rejected in window | open with recent activity | open, awaiting Sebastien's review (subject_role="reviewer") |
+| Launchpad MP | Approved / Merged / Rejected in window | open with recent activity | open, awaiting the user's review (subject_role="reviewer") |
 | 1-1 action item | — | — | — *(always `Bucket.NONE`)* |
 
 Tie-breaking: each item goes to exactly one bucket. The function evaluates in order Done → Needs attention → Active → falls through to None.
@@ -315,7 +313,7 @@ activity-dashboard/
 | Phase | Work | Hours |
 |---|---|---|
 | 1 | Project scaffold, `pyproject.toml`, config loader, `Item` dataclass, CLI skeleton, ThreadPoolExecutor orchestrator | 2.0 |
-| 2 | GitHub adapter + smoke test against Sebastien's real account | 2.5 |
+| 2 | GitHub adapter + smoke test against the user's real account | 2.5 |
 | 3 | Launchpad adapter + smoke test | 2.5 |
 | 4 | Jira adapter + smoke test | 2.5 |
 | 5 | Google Docs 1-1 notes adapter + smoke test (OAuth setup is the risk) | 2.0 |

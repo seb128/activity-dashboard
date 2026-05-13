@@ -1,14 +1,14 @@
 # Context — activity-dashboard
 
 ## What we're building
-A local command-line tool that aggregates recent activity for one *subject* (Sebastien or one of his direct reports) across the team's tools, and renders a single static HTML report.
+A local command-line tool that aggregates recent activity for one *subject* (the user themself, or someone they manage) across the team's tools, and renders a single static HTML report.
 
 Works for both personal week-in-review and 1-1 preparation — same code, different `--subject` value.
 
 24-hour MVP. Hackathon-style — "wow the judges."
 
 ## Repo
-- **Path:** `/home/ubuntu/hackhathon/activity-dashboard/` (under the hackhathon share, mounted from Sebastien's real system)
+- **Path:** `/home/ubuntu/hackhathon/activity-dashboard/` (under the hackhathon share, mounted from the user's real system)
 - **Branch:** `main`
 - **Initial commit:** `f9bc139` (design spec + README + .gitignore)
 - **Spec:** `docs/superpowers/specs/2026-05-13-activity-dashboard-design.md`
@@ -16,9 +16,9 @@ Works for both personal week-in-review and 1-1 preparation — same code, differ
 ## Decided
 
 ### User & lens
-- **Operator:** Sebastien runs the tool locally.
+- **Operator:** the user, running the tool locally on their laptop.
 - **Subject:** configurable per run — self or any direct report.
-- **Auth lens:** always Sebastien's credentials. The dashboard only ever surfaces what Sebastien could see manually. No "perspective flip" logic; Sebastien being the authenticated principal naturally creates the right filtering.
+- **Auth lens:** always the user's credentials. The dashboard only ever surfaces what the user could see manually. No "perspective flip" logic; the user being the authenticated principal naturally creates the right filtering.
 
 ### Layout
 1. **Top tier — 3 intent buckets:** *Done* / *Active* / *Needs attention*. Sources mixed within each bucket.
@@ -45,7 +45,7 @@ Works for both personal week-in-review and 1-1 preparation — same code, differ
 
 ### Intelligence
 - **No LLM at runtime.** Pure rules. Deterministic, demo-stable, free to run.
-- Claude (this agent) writes the code; Sebastien doesn't paste real private content into the dev conversation.
+- Claude (this agent) writes the code; the user doesn't paste real private content into the dev conversation.
 
 ### Time window
 Last **7 days** rolling. Configurable in YAML.
@@ -70,7 +70,7 @@ config.yaml → load → [4 adapters fetch in parallel via ThreadPoolExecutor]
 ### Config
 - Single YAML file at `~/.config/activity-dashboard/config.yaml` (overridable with `--config`).
 - Holds: per-subject identifiers (canonical email, optional Ubuntu alias, Launchpad ID, GitHub ID, 1-1 notes doc URL).
-- Holds: paths to Sebastien's token files (Jira, Google OAuth, optional GitHub).
+- Holds: paths to the user's token files (Jira, Google OAuth, optional GitHub).
 - Holds: rule thresholds.
 - Gitignored. Repo ships a `config.example.yaml`.
 
@@ -90,7 +90,7 @@ config.yaml → load → [4 adapters fetch in parallel via ThreadPoolExecutor]
 ## Current status
 - ✅ Brainstorming complete.
 - ✅ Design spec written, self-reviewed, committed.
-- 📝 **Awaiting:** Sebastien's review of the spec.
+- 📝 **Awaiting:** the user's review of the spec.
 - ⏭️ **Next:** invoke `writing-plans` skill to translate the spec into an executable implementation plan.
 
 ## Process notes
