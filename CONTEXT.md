@@ -135,7 +135,7 @@ These are spec items the plan **didn't propagate to code**. The dashboard works 
 | # | Severity | Gap | Spec ref | Cost |
 |---|---|---|---|---|
 | 1 | Important | **Launchpad MPs where subject is *reviewer*** are not fetched. Adapter calls `getMergeProposals(...)` which returns only proposals the subject *registered*. Rules engine also doesn't differentiate MP reviewer role. | §7.2, §8 | ~20 lines (extra adapter query + rules branch) |
-| 2 | Important | **Jira `reporter = "<email>"` query not run.** Adapter only does `assignee`. Tickets the subject filed but isn't assigned to are invisible. | §7.3 | ~5 lines (add to JQL or second query + dedupe) |
+| ~~2~~ | resolved | ~~Jira `reporter` query~~ — spec corrected: assignee-only is the desired behavior (we want the subject's *current work*, not historical filings). No code change needed. | §7.3 (spec updated) | done |
 | 3 | Minor (latent) | **Source badge label** in top-tier bucket template uses `source_labels[it.source]`, would render blank for unknown source. All 5 current sources are mapped so not observable today. | n/a (defensive only) | 1 line |
 | 4 | Minor / informational | Silent fallback to anonymous GitHub when token file is configured-but-missing — no warning. | n/a | ~3 lines |
 

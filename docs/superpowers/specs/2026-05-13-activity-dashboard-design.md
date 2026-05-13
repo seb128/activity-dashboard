@@ -189,8 +189,7 @@ No abstract base class. Tests stub these as plain functions.
 
 - Library: `atlassian-python-api`.
 - Auth: email + API token from config.
-- Query: JQL `assignee = "<subject.canonical_email>" AND updated >= -<window_days>d`.
-  - Plus: `reporter = "<email>"` for items they raised.
+- Query: JQL `assignee = "<subject.canonical_email>" AND updated >= -<window_days>d`. Assignee-only; reporter is intentionally out of scope (we want the subject's *current work*, not everything they ever filed).
 - Maps to:
   - `kind="ticket"`, status from Jira workflow.
 
