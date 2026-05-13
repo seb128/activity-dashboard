@@ -89,4 +89,4 @@ def render_report(results, subject, settings, out_path: Path) -> None:
         carried_over=carried_over,
         for_next_week=for_next_week,
     )
-    Path(out_path).write_text(html)
+    Path(out_path).write_text(html, encoding="utf-8")
