@@ -38,7 +38,17 @@ def fetch(subject, settings, *, _client=None) -> list[Item]:
         f"AND updated >= -{window}d "
         "ORDER BY updated DESC"
     )
-    response = client.jql(jql, fields=["summary", "status", "updated"], limit=200)
+    try:
+        response = client.jql(jql, fields=["summary", "status", "updated"], limit=200)
+    except Exception as e:
+        # atlassian-python-api wraps HTTP errors in requests.HTTPError; when the
+        # response body is empty (common on 401/403), the wrapped message is "".
+        # Surface the status code and a slice of the body so the warning log is useful.
+        resp = getattr(e, "response", None)
+        status = getattr(resp, "status_code", None)
+        body = (getattr(resp, "text", "") or "")[:300]
+        detail = f"HTTP {status}: {body!r}" if status else f"{type(e).__name__}"
+        raise RuntimeError(f"Jira API request failed ({detail}); JQL was: {jql}") from e
     base_url = settings.credentials.jira.base_url.rstrip("/")
 
     items: list[Item] = []
