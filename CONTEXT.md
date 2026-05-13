@@ -80,9 +80,16 @@ config.yaml → load → [4 adapters fetch in parallel via ThreadPoolExecutor]
 - Re-run to refresh. No server, no persisted state.
 
 ### Language / stack
-- **Python 3.x**
-- `PyGithub`, `launchpadlib`, `atlassian-python-api`, `google-api-python-client`, `Jinja2`, `PyYAML`
+- **Python 3.11+** (CI/dev currently runs 3.14)
+- Runtime deps: `PyGithub`, `launchpadlib`, `atlassian-python-api`, `google-api-python-client`, `google-auth-oauthlib`, `Jinja2`, `PyYAML`, `requests`, `beautifulsoup4`, `lxml`
 - `ThreadPoolExecutor` from stdlib for parallel fetch
+- Build backend: `setuptools`
+
+### Workflow / packaging
+- **Package manager:** `uv` (Astral). `uv.lock` committed for reproducible installs.
+- **Install:** `uv sync` (runtime) or `uv sync --extra dev` (adds pytest).
+- **Run:** `uv run activity-dashboard --subject me ...` — no manual venv activation.
+- **Makefile** wraps common tasks: `make install`, `make install-dev`, `make test`, `make test-quick`, `make run`, `make clean`, `make help`. `make run` accepts `SUBJECT=`, `OUT=`, `CONFIG=` overrides.
 
 ## Time budget
 ~17–18h estimated for B' scope. ~5.5h slack inside the 24h window.
@@ -100,14 +107,16 @@ config.yaml → load → [4 adapters fetch in parallel via ThreadPoolExecutor]
 
 ## Implementation summary
 
-Pip-installable Python package `activity-dashboard` at the repo root. Run via the `activity-dashboard` CLI entrypoint defined in `pyproject.toml`.
+uv-managed Python package `activity-dashboard` at the repo root. Run via the `activity-dashboard` CLI entrypoint defined in `pyproject.toml`.
 
 ### File layout (built)
 ```
 activity-dashboard/
 ├── README.md                 (quick-start)
+├── Makefile                  (install / test / run / clean targets)
 ├── config.example.yaml       (annotated YAML template)
 ├── pyproject.toml
+├── uv.lock                   (reproducible install)
 ├── activity_dashboard/
 │   ├── item.py               (Item dataclass + Bucket enum)
 │   ├── config.py             (YAML loader, typed dataclasses)
@@ -117,11 +126,11 @@ activity-dashboard/
 │   ├── templates/report.html.j2
 │   └── adapters/
 │       ├── github.py         live
-│       ├── launchpad.py      live
+│       ├── launchpad.py      live (launchpadlib + +activereviews scrape)
 │       ├── jira.py           live
 │       ├── gdocs.py          live (parses "For next week" + "Carried over")
 │       └── gmail.py          scaffold only (raises NotImplementedError)
-└── tests/                    (64 tests across all modules)
+└── tests/                    (71 tests across all modules)
 ```
 
 ### Bugs caught and fixed during reviews
@@ -155,12 +164,19 @@ The final reviewer's verdict: **Ready**, with awareness of gaps #1 and #2 above.
 If this conversation died and you're picking up cold:
 
 1. **Read in order:** `CONTEXT.md` (this file), `docs/superpowers/specs/2026-05-13-activity-dashboard-design.md`, `docs/superpowers/plans/2026-05-13-activity-dashboard.md`.
-2. **Verify state:** `cd /home/ubuntu/hackhathon/activity-dashboard && . .venv/bin/activate && pytest -v` (expect 64 passing).
+2. **Verify state:** `cd /home/ubuntu/hackhathon/activity-dashboard && make test-quick` (expect 71 passing). Or `uv run pytest -q`.
 3. **Check `git log --oneline`** — should match the "Recent commits" section below.
-4. **Ask Sebastien what to work on next.** Likely candidates: fix LP reviewer MPs (gap #1), fix Jira reporter query (gap #2), help with smoke-testing or demo prep.
+4. **Ask Sebastien what to work on next.** Most likely: smoke-test against real APIs (drop tokens, `make run SUBJECT=me`), polish, or demo prep.
 
 ## Recent commits (most recent first)
 ```
+167cf03 chore: add Makefile for common dev tasks
+5702415 chore: switch dev workflow to uv
+de86477 CONTEXT.md: mark LP reviewer-MP gap closed
+c964ba1 fix(adapters): correct LP scrape regex and isolate scrape failures
+d68247a feat(adapters): scrape +activereviews for LP reviewer-side MPs
+95fc703 spec: clarify Jira adapter is assignee-only by design
+33852d1 CONTEXT.md: mark v1 implementation complete; record known gaps
 80959da fix(render): write report as UTF-8 explicitly
 19d5e8b polish: example config, README quick-start, source status table
 c04dd10 fix(render): enable autoescape for .j2 templates, robust source label lookup
@@ -177,9 +193,7 @@ e0883c9 feat(adapters): Google Docs adapter parsing For next week + Carried over
 019b702 feat(config): YAML loader with Settings/SubjectConfig dataclasses
 5c4246f feat(item): add Item dataclass and Bucket enum
 8673577 scaffold: package layout, pyproject.toml, smoke test
-7109a43 CONTEXT.md: pause before execution; add resume instructions
-99d210c Add implementation plan: 12 TDD tasks for v1
-... (earlier commits: brainstorming/spec)
+... (earlier commits: brainstorming/spec/plan)
 ```
 
 ## Author / operator distinction
