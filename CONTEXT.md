@@ -90,31 +90,94 @@ config.yaml → load → [4 adapters fetch in parallel via ThreadPoolExecutor]
 ## Current status
 - ✅ Brainstorming complete.
 - ✅ Design spec written, self-reviewed, committed.
-- ✅ Spec reviewed and approved by Sebastien.
-- ✅ Implementation plan written (`docs/superpowers/plans/2026-05-13-activity-dashboard.md`) — 12 TDD tasks, complete code in every step.
-- ✅ Execution mode chosen: **Subagent-Driven** (fresh subagent per task, review between tasks).
-- ⏸️ **Paused** before kicking off execution. Sebastien is at lunch; will confirm when ready to start.
-- ⏭️ **Next:** on confirmation, invoke `superpowers:subagent-driven-development` skill to execute Task 1 of the plan.
+- ✅ Implementation plan written (`docs/superpowers/plans/2026-05-13-activity-dashboard.md`) — 12 TDD tasks.
+- ✅ **All 12 implementation tasks complete.** Subagent-driven execution with two-stage review (spec compliance + code quality) per task.
+- ✅ Final holistic review done.
+- 🟢 **64/64 tests passing.**
+- ⏭️ **Next:** Sebastien is reviewing the four issues surfaced by the final review (see "Known gaps" below). Decisions pending on whether to fix.
+
+## Implementation summary
+
+Pip-installable Python package `activity-dashboard` at the repo root. Run via the `activity-dashboard` CLI entrypoint defined in `pyproject.toml`.
+
+### File layout (built)
+```
+activity-dashboard/
+├── README.md                 (quick-start)
+├── config.example.yaml       (annotated YAML template)
+├── pyproject.toml
+├── activity_dashboard/
+│   ├── item.py               (Item dataclass + Bucket enum)
+│   ├── config.py             (YAML loader, typed dataclasses)
+│   ├── rules.py              (per-source bucket assignment)
+│   ├── cli.py                (argparse + ThreadPoolExecutor orchestrator)
+│   ├── render.py             (Jinja2 + Vanilla Framework HTML)
+│   ├── templates/report.html.j2
+│   └── adapters/
+│       ├── github.py         live
+│       ├── launchpad.py      live
+│       ├── jira.py           live
+│       ├── gdocs.py          live (parses "For next week" + "Carried over")
+│       └── gmail.py          scaffold only (raises NotImplementedError)
+└── tests/                    (64 tests across all modules)
+```
+
+### Bugs caught and fixed during reviews
+1. **`config.py`:** `_expand` silently accepted `None` for non-optional `Path` fields → added `_require_expand` (Task 3 fix, `4e5488d`).
+2. **`render.py`:** autoescape was silently disabled because `select_autoescape(["html"])` doesn't match `.j2` extension — real XSS hole on item titles → fixed to `select_autoescape(["html", "j2"])` (`c04dd10`).
+3. **`render.py`:** `SOURCE_LABELS[name]` would `KeyError` on unknown source → defensive `.get(name, name)` (`c04dd10`).
+4. **`render.py`:** `Path.write_text(html)` used locale-default encoding → explicit `encoding="utf-8"` (`80959da`).
+
+## Known gaps (final review findings)
+
+These are spec items the plan **didn't propagate to code**. The dashboard works without them, but for a complete demo:
+
+| # | Severity | Gap | Spec ref | Cost |
+|---|---|---|---|---|
+| 1 | Important | **Launchpad MPs where subject is *reviewer*** are not fetched. Adapter calls `getMergeProposals(...)` which returns only proposals the subject *registered*. Rules engine also doesn't differentiate MP reviewer role. | §7.2, §8 | ~20 lines (extra adapter query + rules branch) |
+| 2 | Important | **Jira `reporter = "<email>"` query not run.** Adapter only does `assignee`. Tickets the subject filed but isn't assigned to are invisible. | §7.3 | ~5 lines (add to JQL or second query + dedupe) |
+| 3 | Minor (latent) | **Source badge label** in top-tier bucket template uses `source_labels[it.source]`, would render blank for unknown source. All 5 current sources are mapped so not observable today. | n/a (defensive only) | 1 line |
+| 4 | Minor / informational | Silent fallback to anonymous GitHub when token file is configured-but-missing — no warning. | n/a | ~3 lines |
+
+Workaround for an immediate demo: pick a subject whose work is primarily author/assignee (not reviewer-heavy).
+
+## Demo-readiness
+The final reviewer's verdict: **Ready**, with awareness of gaps #1 and #2 above.
+
+## Suggested next steps for Sebastien
+1. **Smoke test against real APIs.** Drop tokens into `~/.config/activity-dashboard/`, run `activity-dashboard --subject me`, inspect the HTML.
+2. **Fix the two Important gaps** (#1 LP reviewer MPs, #2 Jira reporter) if they matter for your demo subject.
+3. **Demo prep:** dry-run the report against a few different subjects to catch any visual issues.
 
 ## Resume instructions (for any future Claude session)
 If this conversation died and you're picking up cold:
 
-1. **Read these files first**, in order:
-   - `CONTEXT.md` (this file) — overall context and decisions.
-   - `docs/superpowers/specs/2026-05-13-activity-dashboard-design.md` — the design spec.
-   - `docs/superpowers/plans/2026-05-13-activity-dashboard.md` — the 12-task execution plan.
-2. **Check the repo state:** `git log --oneline` to see how many tasks are already done. Each task ends in a commit with a `feat(...)`, `scaffold:`, or `polish:` prefix. Count those and you'll know which Task # to start from.
-3. **Ask Sebastien for confirmation** before kicking off subagents (he asked to be in control of when execution starts).
-4. **When green-lit:** invoke `superpowers:subagent-driven-development` skill. Dispatch one subagent per task, in plan order, reviewing between tasks. Don't batch.
+1. **Read in order:** `CONTEXT.md` (this file), `docs/superpowers/specs/2026-05-13-activity-dashboard-design.md`, `docs/superpowers/plans/2026-05-13-activity-dashboard.md`.
+2. **Verify state:** `cd /home/ubuntu/hackhathon/activity-dashboard && . .venv/bin/activate && pytest -v` (expect 64 passing).
+3. **Check `git log --oneline`** — should match the "Recent commits" section below.
+4. **Ask Sebastien what to work on next.** Likely candidates: fix LP reviewer MPs (gap #1), fix Jira reporter query (gap #2), help with smoke-testing or demo prep.
 
-## Latest commits
+## Recent commits (most recent first)
 ```
+80959da fix(render): write report as UTF-8 explicitly
+19d5e8b polish: example config, README quick-start, source status table
+c04dd10 fix(render): enable autoescape for .j2 templates, robust source label lookup
+9c8745c fix(render): correct vanilla-framework test assertion
+f11420a feat(render): Jinja2 template + Vanilla Framework HTML output
+87ac947 feat(cli): orchestrator with parallel fetch and failure isolation
+b6bb23b feat(rules): per-source bucket assignment with thresholds
+674d44d feat(adapters): Gmail scaffold raising NotImplementedError
+e0883c9 feat(adapters): Google Docs adapter parsing For next week + Carried over
+626dbc8 feat(adapters): Jira adapter using JQL assignee + window
+67e6a58 feat(adapters): Launchpad adapter for bugs and merge proposals
+322f7e4 feat(adapters): GitHub adapter with author + review-requested queries
+4e5488d fix(config): tighten path types and UTF-8 read
+019b702 feat(config): YAML loader with Settings/SubjectConfig dataclasses
+5c4246f feat(item): add Item dataclass and Bucket enum
+8673577 scaffold: package layout, pyproject.toml, smoke test
+7109a43 CONTEXT.md: pause before execution; add resume instructions
 99d210c Add implementation plan: 12 TDD tasks for v1
-6691971 Restore spec author line; mark spec approved in CONTEXT.md
-ff8c610 Genericize spec and CONTEXT.md for sharing
-c53f591 Update CONTEXT.md repo path after moving under hackhathon dir
-3b9432d Add CONTEXT.md tracking design decisions
-f9bc139 Initial commit: design spec for activity-dashboard
+... (earlier commits: brainstorming/spec)
 ```
 
 ## Author / operator distinction
