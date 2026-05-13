@@ -10,6 +10,11 @@ credentials:
     base_url: https://canonical.atlassian.net
     email_file: ~/.config/activity-dashboard/jira.email
     token_file: ~/.config/activity-dashboard/jira.token
+    # Optional: a JQL fragment scoping "current pulse". If set, the dashboard runs
+    # a second Jira query for tickets matching this AND assigned to the subject
+    # AND not updated in over `pulse_stale_days` days, and routes them to the
+    # Needs attention bucket. Leave commented to disable.
+    # pulse_jql: "project = DCR AND sprint in openSprints()"
 
   # Google OAuth — get the client secret JSON from Google Cloud Console
   # (Docs API enabled, OAuth consent screen configured, desktop app credentials).
@@ -26,6 +31,7 @@ rules:
     stalled_pr_days: 5
     stalled_jira_days: 5
     stalled_launchpad_days: 5
+    pulse_stale_days: 7         # only used when credentials.jira.pulse_jql is set
 
 # Subjects the dashboard can be run against.
 subjects:

@@ -23,6 +23,7 @@ class JiraCredentials:
     base_url: str
     email_file: Path
     token_file: Path
+    pulse_jql: str | None = None     # JQL fragment scoping the "pulse"; None = feature off
 
 
 @dataclass
@@ -40,6 +41,7 @@ class NeedsAttentionThresholds:
     stalled_pr_days: int = 5
     stalled_jira_days: int = 5
     stalled_launchpad_days: int = 5
+    pulse_stale_days: int = 7        # items in pulse with no movement > this → NEEDS_ATTENTION
 
 
 @dataclass
@@ -81,6 +83,7 @@ def load_config(path: Path) -> Settings:
             base_url=c["jira"]["base_url"],
             email_file=_require_expand(c["jira"]["email_file"]),
             token_file=_require_expand(c["jira"]["token_file"]),
+            pulse_jql=c["jira"].get("pulse_jql"),
         ),
         google_credentials_file=_require_expand(c["google_credentials_file"]),
         google_token_file=_require_expand(c["google_token_file"]),
@@ -96,6 +99,7 @@ def load_config(path: Path) -> Settings:
             stalled_pr_days=na.get("stalled_pr_days", 5),
             stalled_jira_days=na.get("stalled_jira_days", 5),
             stalled_launchpad_days=na.get("stalled_launchpad_days", 5),
+            pulse_stale_days=na.get("pulse_stale_days", 7),
         ),
     )
 

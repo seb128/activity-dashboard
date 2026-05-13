@@ -134,3 +134,19 @@ def test_launchpad_mp_reviewer_role_is_needs_attention():
                subject_role="reviewer",
                last_activity_at=_now() - timedelta(hours=2))
     assert assign_bucket(it, _settings(), _now()) == Bucket.NEEDS_ATTENTION
+
+
+def test_jira_stale_in_pulse_routes_to_needs_attention():
+    """Items tagged stale_in_pulse always go to NEEDS_ATTENTION, regardless of status."""
+    it = _item(source="jira", kind="ticket", status="In Progress",
+               raw={"stale_in_pulse": True},
+               last_activity_at=_now() - timedelta(days=10))
+    assert assign_bucket(it, _settings(), _now()) == Bucket.NEEDS_ATTENTION
+
+
+def test_jira_stale_in_pulse_done_status_still_done():
+    """A stale-in-pulse card that has been marked Done should still go to DONE."""
+    it = _item(source="jira", kind="ticket", status="Done",
+               raw={"stale_in_pulse": True},
+               last_activity_at=_now() - timedelta(days=10))
+    assert assign_bucket(it, _settings(), _now()) == Bucket.DONE

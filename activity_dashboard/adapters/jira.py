@@ -1,10 +1,13 @@
 """Jira adapter — tickets where the subject is assignee, within the activity window."""
 
 from __future__ import annotations
+import logging
 from datetime import datetime
 from pathlib import Path
 
 from ..item import Item
+
+_log = logging.getLogger("activity_dashboard")
 
 NAME = "jira"
 
@@ -66,4 +69,44 @@ def fetch(subject, settings, *, _client=None) -> list[Item]:
             bucket=None,
             raw={"key": key},
         ))
+
+    # Optional stale-in-pulse second query
+    pulse_jql = settings.credentials.jira.pulse_jql
+    if pulse_jql:
+        stale_days = settings.rules.needs_attention.pulse_stale_days
+        stale_q = (
+            f'({pulse_jql}) '
+            f'AND assignee = "{subject.canonical_email}" '
+            f'AND updated < -{stale_days}d '
+            'ORDER BY updated DESC'
+        )
+        try:
+            stale_response = client.jql(stale_q, fields=["summary", "status", "updated"], limit=200)
+        except Exception as e:
+            resp = getattr(e, "response", None)
+            status = getattr(resp, "status_code", None)
+            body = (getattr(resp, "text", "") or "")[:300]
+            _log.warning(
+                "jira: stale-in-pulse query failed (HTTP %s body=%r); JQL was: %s",
+                status, body, stale_q,
+            )
+        else:
+            seen_keys = {it.raw["key"] for it in items}
+            for issue in stale_response.get("issues", []):
+                key = issue["key"]
+                if key in seen_keys:
+                    continue  # dedupe across the two queries
+                fields = issue["fields"]
+                items.append(Item(
+                    source=NAME,
+                    kind="ticket",
+                    title=fields["summary"],
+                    url=f"{base_url}/browse/{key}",
+                    subject_role="assignee",
+                    status=fields["status"]["name"],
+                    last_activity_at=_parse_jira_datetime(fields["updated"]),
+                    bucket=None,
+                    raw={"key": key, "stale_in_pulse": True},
+                ))
+
     return items

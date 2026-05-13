@@ -193,6 +193,8 @@ No abstract base class. Tests stub these as plain functions.
 - Maps to:
   - `kind="ticket"`, status from Jira workflow.
 
+**Optional stale-in-pulse query.** If `credentials.jira.pulse_jql` is set in config, the adapter also runs a second JQL: `(<pulse_jql>) AND assignee = "<email>" AND updated < -<pulse_stale_days>d`. Items from this query are tagged with `raw["stale_in_pulse"] = True` and the rules engine routes them to **Needs attention** regardless of status (except Done/Closed/Resolved, which still go to Done). Designed for Canonical's "pulse" sprint convention; the JQL fragment is fully user-controlled so other teams can adapt it.
+
 ### 7.4 Google Docs (1-1 notes) adapter
 
 - Library: `google-api-python-client` (Docs API).
@@ -239,7 +241,7 @@ Decision logic per source:
 |---|---|---|---|
 | GitHub PR (author) | `status="merged"` or `"closed"` in window | `status="open"` with activity in window | `status="open"`, no activity > `stalled_pr_days` |
 | GitHub PR (reviewer) | — | — | always → "awaiting your review" once age ≥ `pr_awaiting_review_days` (default 0 = immediately) |
-| Jira ticket (assignee) | status transitioned to Done/Closed/Resolved in window | "In Progress" or "In Review" with activity in window | "In Progress" with no movement > `stalled_jira_days`; or any status with no movement > `jira_assigned_no_movement_days` |
+| Jira ticket (assignee) | status transitioned to Done/Closed/Resolved in window | "In Progress" or "In Review" with activity in window | "In Progress" with no movement > `stalled_jira_days`; or any status with no movement > `jira_assigned_no_movement_days`; or `raw["stale_in_pulse"]=True` (overrides active/stalled logic, Done-check still takes precedence) |
 | Launchpad bug | Fix Released / Fix Committed in window | status updates or comments in window | open, no comment > `stalled_launchpad_days` |
 | Launchpad MP | Approved / Merged / Rejected in window | open with recent activity | open, awaiting the user's review (subject_role="reviewer") |
 | 1-1 action item | — | — | — *(always `Bucket.NONE`)* |

@@ -92,3 +92,31 @@ def test_load_config_required_path_null_raises(tmp_path):
     p = write_config(tmp_path, cfg)
     with pytest.raises(ValueError):
         load_config(p)
+
+
+def test_load_config_pulse_jql_optional(tmp_path):
+    p = write_config(tmp_path, minimal_config())
+    settings = load_config(p)
+    assert settings.credentials.jira.pulse_jql is None
+
+
+def test_load_config_pulse_jql_loaded(tmp_path):
+    cfg = minimal_config()
+    cfg["credentials"]["jira"]["pulse_jql"] = "project = DCR AND sprint in openSprints()"
+    p = write_config(tmp_path, cfg)
+    settings = load_config(p)
+    assert settings.credentials.jira.pulse_jql == "project = DCR AND sprint in openSprints()"
+
+
+def test_load_config_pulse_stale_days_default(tmp_path):
+    p = write_config(tmp_path, minimal_config())
+    settings = load_config(p)
+    assert settings.rules.needs_attention.pulse_stale_days == 7
+
+
+def test_load_config_pulse_stale_days_override(tmp_path):
+    cfg = minimal_config()
+    cfg["rules"]["needs_attention"]["pulse_stale_days"] = 14
+    p = write_config(tmp_path, cfg)
+    settings = load_config(p)
+    assert settings.rules.needs_attention.pulse_stale_days == 14

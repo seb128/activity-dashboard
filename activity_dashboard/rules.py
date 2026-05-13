@@ -42,6 +42,8 @@ def _bucket_for_github(item: Item, rules: Rules, now: datetime) -> Bucket:
 def _bucket_for_jira(item: Item, rules: Rules, now: datetime) -> Bucket:
     if item.status in JIRA_DONE_STATUSES:
         return Bucket.DONE
+    if item.raw.get("stale_in_pulse"):
+        return Bucket.NEEDS_ATTENTION
     age = _age_days(item, now)
     if item.status in JIRA_ACTIVE_STATUSES:
         if age > rules.needs_attention.stalled_jira_days:
