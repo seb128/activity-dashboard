@@ -1,7 +1,9 @@
 """Launchpad adapter — bugs and merge proposals authored/assigned by the subject."""
 
 from __future__ import annotations
+import logging
 import re
+import requests
 from datetime import datetime, timedelta, timezone
 
 from ..item import Item
@@ -11,7 +13,7 @@ NAME = "launchpad"
 _LAUNCHPAD_CODE_BASE = "https://code.launchpad.net"
 _MATCH_MP_HREF = re.compile(r"^/.*/\+merge/\d+$")
 # Matches section headings: "Requested reviews by <name>" or "Reviews <name> can do"
-_MATCH_CAN_DO = re.compile(r"^(Requested reviews)|(Reviews) .* can do$")
+_MATCH_CAN_DO = re.compile(r"^Requested reviews|^Reviews .* can do$")
 
 
 def _create_client(settings):
@@ -109,8 +111,14 @@ def fetch(subject, settings, *, _client=None, _http_get=None) -> list[Item]:
         ))
 
     # NEW: reviewer-side MPs via web scrape (works around LP API gap for Git MPs)
-    import requests
     http_get = _http_get if _http_get is not None else requests.get
-    items.extend(_fetch_reviewer_mps(subject, http_get))
+    try:
+        items.extend(_fetch_reviewer_mps(subject, http_get))
+    except Exception as e:
+        # Scrape is supplemental; don't destroy launchpadlib results if it fails.
+        logging.getLogger("activity_dashboard").warning(
+            "launchpad: failed to scrape reviewer MPs for %s: %s",
+            subject.launchpad_id, e,
+        )
 
     return items

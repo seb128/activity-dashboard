@@ -174,3 +174,30 @@ def test_fetch_includes_reviewer_mps(monkeypatch):
     # Reviewer MPs were extracted
     reviewer_mps = [i for i in items if i.subject_role == "reviewer"]
     assert len(reviewer_mps) == 3
+
+
+def test_fetch_reviewer_scrape_failure_does_not_destroy_lp_data(caplog):
+    """If +activereviews scrape fails, bugs/registered-MPs are still returned."""
+    import logging
+    from datetime import datetime, timezone
+
+    bug = FakeBug("Crash on startup", "https://bugs.launchpad.net/x/+bug/1",
+                  "In Progress", datetime(2026, 5, 10, tzinfo=timezone.utc))
+    task = FakeBugTask(bug, "In Progress", datetime(2026, 5, 10, tzinfo=timezone.utc))
+    client = FakeLaunchpad({"alice-lp": FakePerson(bug_tasks=[task])})
+
+    def failing_http_get(url, timeout=None):
+        raise RuntimeError("simulated 404")
+
+    caplog.set_level(logging.WARNING)
+    items = lp_adapter.fetch(_subject(), _settings(),
+                             _client=client, _http_get=failing_http_get)
+
+    # The bug from launchpadlib is still present
+    bug_items = [i for i in items if i.kind == "bug"]
+    assert len(bug_items) == 1
+    # No reviewer-MP items (scrape failed)
+    reviewer_items = [i for i in items if i.subject_role == "reviewer"]
+    assert reviewer_items == []
+    # Warning was logged
+    assert any("scrape reviewer MPs" in rec.message for rec in caplog.records)
