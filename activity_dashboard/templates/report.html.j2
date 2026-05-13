@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>activity-dashboard — {{ subject.display_name }}</title>
+  <!-- vanillaframework -->
+  <link rel="stylesheet" href="https://assets.ubuntu.com/v1/vanilla-framework-version-4.20.0.min.css">
+  <style>
+    body { padding: 1.5rem 2rem; }
+    .source-badge { display: inline-block; padding: 0 0.4em; margin-right: 0.4em;
+                    border-radius: 4px; font-size: 0.75em; color: #fff; vertical-align: middle; }
+    .source-badge.github   { background: #24292e; }
+    .source-badge.launchpad{ background: #772953; }
+    .source-badge.jira     { background: #0052cc; }
+    .source-badge.gdocs    { background: #1a73e8; }
+    .item { padding: 0.3em 0; }
+    .meta { color: #666; font-size: 0.85em; margin-left: 0.4em; }
+    .error-card { background: #fdecea; border: 1px solid #f5c2c0;
+                  padding: 0.7em 1em; border-radius: 4px; }
+    .one-on-one-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 768px) { .one-on-one-cols { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="p-strip is-shallow">
+    <div class="u-fixed-width">
+      <h1>{{ subject.display_name }}</h1>
+      <p class="p-text--small">Generated {{ generated_at }}</p>
+    </div>
+  </header>
+
+  <section class="p-strip is-shallow">
+    <div class="row">
+      {% for bucket_name, bucket_label in buckets %}
+      <div class="col-4">
+        <h2 class="p-heading--4">{{ bucket_label }}</h2>
+        {% set items = grouped_by_bucket.get(bucket_name, []) %}
+        {% if items %}
+        <ul class="p-list">
+          {% for it in items %}
+          <li class="p-list__item item">
+            <span class="source-badge {{ it.source }}">{{ source_labels[it.source] }}</span>
+            <a href="{{ it.url }}">{{ it.title }}</a>
+            <span class="meta">{{ relative_age(it.last_activity_at) }} · {{ it.status }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="p-text--small u-text--muted">Nothing here.</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="p-strip is-shallow">
+    <div class="u-fixed-width">
+      <h2 class="p-heading--3">Per-source feed</h2>
+    </div>
+    <div class="row">
+      {% for source_name, source_label in active_sources %}
+      <div class="col-3">
+        <h3 class="p-heading--5">{{ source_label }}</h3>
+        {% set value = results.get(source_name) %}
+        {% if value is iterable and value is not string %}
+          {% if value %}
+          <ul class="p-list">
+            {% for it in value %}
+            <li class="p-list__item item">
+              <a href="{{ it.url }}">{{ it.title }}</a>
+              <span class="meta">{{ it.status }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="p-text--small u-text--muted">No activity.</p>
+          {% endif %}
+        {% else %}
+          <div class="error-card">{{ source_label }} fetch failed: {{ value }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      {% if one_on_one_items %}
+      <div class="col-12">
+        <h3 class="p-heading--5">1-1 notes</h3>
+        <div class="one-on-one-cols">
+          <div>
+            <h4 class="p-heading--6">Carried over from last week</h4>
+            {% if carried_over %}
+            <ul class="p-list">
+              {% for it in carried_over %}
+              <li class="p-list__item item"><a href="{{ it.url }}">{{ it.title }}</a></li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="p-text--small u-text--muted">Nothing carried over.</p>
+            {% endif %}
+          </div>
+          <div>
+            <h4 class="p-heading--6">For next week</h4>
+            {% if for_next_week %}
+            <ul class="p-list">
+              {% for it in for_next_week %}
+              <li class="p-list__item item"><a href="{{ it.url }}">{{ it.title }}</a></li>
+              {% endfor %}
+            </ul>
+            {% else %}
+            <p class="p-text--small u-text--muted">Nothing planned.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</body>
+</html>
