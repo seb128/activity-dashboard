@@ -1,0 +1,27 @@
+# Config and credentials — never commit these
+config.yaml
+*.token
+google-token.json
+google-creds.json
+jira.email
+jira.token
+
+# Generated reports
+report.html
+report-*.html
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
