@@ -82,3 +82,13 @@ def test_load_config_resolves_home_paths(tmp_path: Path, monkeypatch):
     p = write_config(tmp_path, minimal_config())
     settings = load_config(p)
     assert str(settings.credentials.github_token_file).startswith(str(tmp_path))
+    assert str(settings.credentials.jira.email_file).startswith(str(tmp_path))
+    assert str(settings.credentials.google_credentials_file).startswith(str(tmp_path))
+
+
+def test_load_config_required_path_null_raises(tmp_path):
+    cfg = minimal_config()
+    cfg["credentials"]["jira"]["email_file"] = None
+    p = write_config(tmp_path, cfg)
+    with pytest.raises(ValueError):
+        load_config(p)

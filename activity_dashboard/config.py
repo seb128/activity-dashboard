@@ -12,6 +12,12 @@ def _expand(p: str | None) -> Path | None:
     return Path(p).expanduser()
 
 
+def _require_expand(p: str) -> Path:
+    if not p:
+        raise ValueError("required path is missing or empty")
+    return Path(p).expanduser()
+
+
 @dataclass
 class JiraCredentials:
     base_url: str
@@ -66,18 +72,18 @@ class Settings:
 
 
 def load_config(path: Path) -> Settings:
-    raw = yaml.safe_load(Path(path).read_text())
+    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
 
     c = raw["credentials"]
     creds = Credentials(
         github_token_file=_expand(c.get("github_token_file")),
         jira=JiraCredentials(
             base_url=c["jira"]["base_url"],
-            email_file=_expand(c["jira"]["email_file"]),
-            token_file=_expand(c["jira"]["token_file"]),
+            email_file=_require_expand(c["jira"]["email_file"]),
+            token_file=_require_expand(c["jira"]["token_file"]),
         ),
-        google_credentials_file=_expand(c["google_credentials_file"]),
-        google_token_file=_expand(c["google_token_file"]),
+        google_credentials_file=_require_expand(c["google_credentials_file"]),
+        google_token_file=_require_expand(c["google_token_file"]),
     )
 
     r = raw.get("rules", {})
