@@ -17,11 +17,8 @@ mkdir -p ~/.config/activity-dashboard
 cp config.example.yaml ~/.config/activity-dashboard/config.yaml
 # Edit ~/.config/activity-dashboard/config.yaml — subjects, credentials paths.
 
-# 3. Drop your tokens
-echo "<your-github-pat>" > ~/.config/activity-dashboard/github.token
-echo "<your-email>" > ~/.config/activity-dashboard/jira.email
-echo "<your-jira-api-token>" > ~/.config/activity-dashboard/jira.token
-# Download the Google OAuth client JSON to ~/.config/activity-dashboard/google-creds.json
+# 3. Generate and install your tokens (GitHub, Jira, Google OAuth)
+# See "Authentication setup" below for the step-by-step.
 
 # 4. Run
 uv run activity-dashboard --subject me --out ~/report.html
@@ -29,6 +26,58 @@ xdg-open ~/report.html
 ```
 
 The first run triggers a browser OAuth flow for Google Docs. Subsequent runs use the cached token.
+
+## Authentication setup
+
+The tool needs read access to your GitHub, Jira, and Google Docs accounts. All credentials live in `~/.config/activity-dashboard/` and never leave your machine. Launchpad needs no token (anonymous API + public-page scrape).
+
+### GitHub personal access token
+
+Used to raise the API rate limit (60 → 5000 req/hour) and to surface private repos / private PRs you have visibility into.
+
+1. Visit <https://github.com/settings/tokens> and click **Generate new token → Tokens (classic)**.
+2. Give it a name (e.g. *activity-dashboard*) and an expiration date.
+3. Scope: tick **`repo`** for full access (including private). Use **`public_repo`** if you only care about public repos.
+4. Click *Generate token*, copy the value, then:
+   ```bash
+   echo "<paste-token-here>" > ~/.config/activity-dashboard/github.token
+   chmod 600 ~/.config/activity-dashboard/github.token
+   ```
+
+### Jira API token (Atlassian Cloud)
+
+1. Visit <https://id.atlassian.com/manage-profile/security/api-tokens>.
+2. Click **Create API token**, label it (e.g. *activity-dashboard*), and copy the value.
+3. Drop your Atlassian email and the token:
+   ```bash
+   echo "you@canonical.com" > ~/.config/activity-dashboard/jira.email
+   echo "<paste-token-here>"  > ~/.config/activity-dashboard/jira.token
+   chmod 600 ~/.config/activity-dashboard/jira.{email,token}
+   ```
+4. If your org uses a non-default Jira URL, update `credentials.jira.base_url` in `config.yaml`.
+
+### Google OAuth (Docs API, for 1-1 notes)
+
+Slightly more involved because Google requires a project + consent flow:
+
+1. Visit <https://console.cloud.google.com/> and either pick an existing personal project or create a new one (it's free).
+2. In **APIs & Services → Library**, find and **enable** the *Google Docs API*.
+3. In **APIs & Services → OAuth consent screen**, configure:
+   - User type: **External** (or **Internal** if your org has Workspace).
+   - Add yourself as a test user so the unverified app will let you through.
+4. In **APIs & Services → Credentials**, click **Create credentials → OAuth client ID**:
+   - Application type: **Desktop app**.
+   - Download the resulting JSON.
+5. Save the file as:
+   ```bash
+   mv ~/Downloads/client_secret_*.json ~/.config/activity-dashboard/google-creds.json
+   chmod 600 ~/.config/activity-dashboard/google-creds.json
+   ```
+6. On first `make run`, a browser tab opens for consent. After you allow, the tool caches the refresh token at `~/.config/activity-dashboard/google-token.json`, which is reused on subsequent runs.
+
+### Launchpad
+
+No setup. The Launchpad adapter uses anonymous `launchpadlib` for bugs and authored merge proposals, and scrapes the public `+activereviews` page for review requests (works around [LP bug 1979817](https://bugs.launchpad.net/launchpad/+bug/1979817), which excludes Git MPs from the API).
 
 ## Common tasks
 
