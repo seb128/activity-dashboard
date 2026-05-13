@@ -6,11 +6,11 @@ Built for personal week-in-review and 1-1 preparation. Runs entirely on your mac
 
 ## Quick start
 
+Requires [uv](https://docs.astral.sh/uv/) (`curl -LsSf https://astral.sh/uv/install.sh | sh`).
+
 ```bash
-# 1. Install
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -e .
+# 1. Install (requires uv: https://docs.astral.sh/uv/)
+uv sync
 
 # 2. Copy & fill the example config
 mkdir -p ~/.config/activity-dashboard
@@ -24,8 +24,15 @@ echo "<your-jira-api-token>" > ~/.config/activity-dashboard/jira.token
 # Download the Google OAuth client JSON to ~/.config/activity-dashboard/google-creds.json
 
 # 4. Run
-activity-dashboard --subject me --out ~/report.html
+uv run activity-dashboard --subject me --out ~/report.html
 xdg-open ~/report.html
+```
+
+For development (running tests etc.), install the dev dependencies with:
+
+```bash
+uv sync --extra dev
+uv run pytest
 ```
 
 The first run triggers a browser OAuth flow for Google Docs. Subsequent runs use the cached token.
