@@ -8,7 +8,7 @@ Works for both personal week-in-review and 1-1 preparation — same code, differ
 24-hour MVP. Hackathon-style — "wow the judges."
 
 ## Repo
-- **Path:** `/home/ubuntu/activity-dashboard/`
+- **Path:** `/home/ubuntu/hackhathon/activity-dashboard/` (under the hackhathon share, mounted from Sebastien's real system)
 - **Branch:** `main`
 - **Initial commit:** `f9bc139` (design spec + README + .gitignore)
 - **Spec:** `docs/superpowers/specs/2026-05-13-activity-dashboard-design.md`
