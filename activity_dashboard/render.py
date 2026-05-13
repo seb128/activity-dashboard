@@ -31,7 +31,7 @@ def _relative_age(when: datetime) -> str:
     if when.tzinfo is None:
         when = when.replace(tzinfo=timezone.utc)
     delta = now - when
-    secs = int(delta.total_seconds())
+    secs = max(0, int(delta.total_seconds()))
     if secs < 3600:
         return f"{secs // 60}m ago"
     if secs < 86400:
@@ -56,7 +56,7 @@ def _group_by_bucket(results) -> dict[str, list[Item]]:
 def render_report(results, subject, settings, out_path: Path) -> None:
     env = Environment(
         loader=FileSystemLoader(str(_TEMPLATE_DIR)),
-        autoescape=select_autoescape(["html"]),
+        autoescape=select_autoescape(["html", "j2"]),
     )
     env.globals["relative_age"] = _relative_age
 
@@ -64,7 +64,7 @@ def render_report(results, subject, settings, out_path: Path) -> None:
 
     # Per-source feed: include sources we got results from (success or failure),
     # excluding gdocs (it's handled by the 1-1 panel).
-    active_sources = [(name, SOURCE_LABELS[name])
+    active_sources = [(name, SOURCE_LABELS.get(name, name))
                       for name in results.keys()
                       if name != "gdocs"]
 

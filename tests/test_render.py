@@ -135,3 +135,49 @@ def test_render_adapter_failure_panel(tmp_path):
     render_report(results, _subject(), _settings(), out)
     text = out.read_text()
     assert "network down" in text or "failed" in text.lower()
+
+
+def test_render_escapes_item_titles(tmp_path):
+    """HTML in item titles must be escaped, not injected raw."""
+    from activity_dashboard.item import Item, Bucket
+    from datetime import datetime, timezone
+    results = {
+        "github": [
+            Item(
+                source="github", kind="pr",
+                title="<script>alert(1)</script>",
+                url="https://example.com/1",
+                subject_role="author", status="open",
+                last_activity_at=datetime(2026, 5, 12, tzinfo=timezone.utc),
+                bucket=Bucket.ACTIVE, raw={},
+            ),
+        ],
+    }
+    out = tmp_path / "report.html"
+    render_report(results, _subject(), _settings(), out)
+    text = out.read_text()
+    # Raw script tag must NOT appear; escaped form must.
+    assert "<script>alert(1)</script>" not in text
+    assert "&lt;script&gt;" in text
+
+
+def test_render_unknown_source_does_not_crash(tmp_path):
+    """An unknown source name must not raise KeyError on label lookup."""
+    from activity_dashboard.item import Item, Bucket
+    from datetime import datetime, timezone
+    results = {
+        "newsource": [
+            Item(
+                source="newsource", kind="thing", title="Unknown source thing",
+                url="https://example.com", subject_role="author", status="open",
+                last_activity_at=datetime(2026, 5, 12, tzinfo=timezone.utc),
+                bucket=Bucket.ACTIVE, raw={},
+            ),
+        ],
+    }
+    out = tmp_path / "report.html"
+    # Must not raise.
+    render_report(results, _subject(), _settings(), out)
+    text = out.read_text()
+    # The unknown source label falls back to the source name itself.
+    assert "newsource" in text
