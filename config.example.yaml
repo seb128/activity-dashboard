@@ -1,0 +1,45 @@
+# Copy this file to ~/.config/activity-dashboard/config.yaml and fill in your details.
+# This file is safe to commit; the real one is gitignored.
+
+# Paths to your credentials.
+credentials:
+  # Optional: GitHub personal access token (boosts rate limits, exposes private repos you can see).
+  github_token_file: ~/.config/activity-dashboard/github.token
+
+  jira:
+    base_url: https://canonical.atlassian.net
+    email_file: ~/.config/activity-dashboard/jira.email
+    token_file: ~/.config/activity-dashboard/jira.token
+
+  # Google OAuth — get the client secret JSON from Google Cloud Console
+  # (Docs API enabled, OAuth consent screen configured, desktop app credentials).
+  google_credentials_file: ~/.config/activity-dashboard/google-creds.json
+  # The tool writes/updates this on first run after the OAuth consent dance.
+  google_token_file: ~/.config/activity-dashboard/google-token.json
+
+# Rules engine thresholds. All day-counts are knobs.
+rules:
+  window_days: 7
+  needs_attention:
+    pr_awaiting_review_days: 0          # 0 = any open PR you're requested on counts
+    jira_assigned_no_movement_days: 2
+    stalled_pr_days: 5
+    stalled_jira_days: 5
+    stalled_launchpad_days: 5
+
+# Subjects the dashboard can be run against.
+subjects:
+  me:
+    display_name: Your Name
+    canonical_email: you@canonical.com
+    ubuntu_alias: you@ubuntu.com            # optional, reserved for future Gmail adapter
+    launchpad_id: your-lp-id
+    github_id: your-gh-id
+    one_on_one_doc: https://docs.google.com/document/d/REPLACE_WITH_DOC_ID/edit
+
+  alice:
+    display_name: Alice Smith
+    canonical_email: alice.smith@canonical.com
+    launchpad_id: alice-lp-id
+    github_id: alice-gh
+    one_on_one_doc: https://docs.google.com/document/d/REPLACE_WITH_DOC_ID/edit
