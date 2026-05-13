@@ -28,14 +28,22 @@ uv run activity-dashboard --subject me --out ~/report.html
 xdg-open ~/report.html
 ```
 
-For development (running tests etc.), install the dev dependencies with:
+The first run triggers a browser OAuth flow for Google Docs. Subsequent runs use the cached token.
+
+## Common tasks
+
+A `Makefile` wraps the `uv` commands for convenience:
 
 ```bash
-uv sync --extra dev
-uv run pytest
+make install         # uv sync
+make install-dev     # uv sync --extra dev (adds pytest)
+make test            # uv run pytest -v
+make test-quick      # uv run pytest -q
+make run             # uv run activity-dashboard --subject me --out report.html
+make run SUBJECT=alice OUT=alice.html
+make clean           # remove .venv, caches, and build artifacts
+make help            # list all targets
 ```
-
-The first run triggers a browser OAuth flow for Google Docs. Subsequent runs use the cached token.
 
 ## What it shows
 
