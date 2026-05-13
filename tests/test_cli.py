@@ -95,7 +95,8 @@ def test_run_skips_gmail_with_not_implemented(tmp_path, monkeypatch, caplog):
     assert any("gmail" in rec.message and "skipped" in rec.message for rec in caplog.records)
 
 
-def test_run_isolates_failures(tmp_path, monkeypatch):
+def test_run_isolates_failures(tmp_path, monkeypatch, caplog):
+    import logging
     cfg = _write_config(tmp_path)
 
     def fail_fetch(s, st, *, _client=None): raise RuntimeError("network down")
@@ -113,9 +114,15 @@ def test_run_isolates_failures(tmp_path, monkeypatch):
         Path(out_path).write_text("")
     monkeypatch.setattr("activity_dashboard.cli.render_report", fake_render)
 
+    caplog.set_level(logging.WARNING)
     out_path = tmp_path / "report.html"
     exit_code = cli.main(["--subject", "alice", "--config", str(cfg), "--out", str(out_path)])
 
     assert exit_code == 0
     assert isinstance(captured["results"]["github"], Exception)
     assert isinstance(captured["results"]["launchpad"], list)
+    # Failure log includes exception type and repr (not just str(e), which can be empty).
+    failure_msg = next(rec.message for rec in caplog.records
+                       if "github" in rec.message and "failed" in rec.message)
+    assert "RuntimeError" in failure_msg
+    assert "network down" in failure_msg

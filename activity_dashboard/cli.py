@@ -31,7 +31,9 @@ def _fetch_all(subject, settings) -> dict[str, list[Item] | Exception]:
             except NotImplementedError:
                 log.info("adapter %s skipped (not implemented)", name)
             except Exception as e:
-                log.warning("adapter %s failed: %s", name, e)
+                # Always show exception type + repr; with --verbose, also dump traceback.
+                log.warning("adapter %s failed: %s: %r", name, type(e).__name__, e)
+                log.debug("adapter %s traceback:", name, exc_info=True)
                 results[name] = e
     return results
 
