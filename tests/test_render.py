@@ -53,7 +53,7 @@ def test_render_includes_subject_display_name(tmp_path):
 def test_render_includes_vanilla_framework_css(tmp_path):
     out = tmp_path / "report.html"
     render_report({}, _subject(), _settings(), out)
-    assert "vanillaframework" in out.read_text().lower()
+    assert "vanilla-framework" in out.read_text().lower()
 
 
 def test_render_bucket_columns_present(tmp_path):
