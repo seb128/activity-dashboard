@@ -90,8 +90,12 @@ config.yaml → load → [4 adapters fetch in parallel via ThreadPoolExecutor]
 ## Current status
 - ✅ Brainstorming complete.
 - ✅ Design spec written, self-reviewed, committed.
-- 📝 **Awaiting:** the user's review of the spec.
+- ✅ Spec reviewed and approved by Sebastien.
 - ⏭️ **Next:** invoke `writing-plans` skill to translate the spec into an executable implementation plan.
+
+## Author / operator distinction
+- **Author of spec & commits:** Sebastien Bacher (designing the tool with Claude).
+- **"the user" in spec body:** generic — anyone who runs the tool. Genericized so the tool can be shared with others.
 
 ## Process notes
 - Brainstorming skill in use — design first, no code until spec is approved.

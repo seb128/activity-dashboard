@@ -1,6 +1,8 @@
 # activity-dashboard — Design Spec
 
 **Date:** 2026-05-13
+**Author:** Sebastien Bacher (with Claude as architect)
+**Target:** 24-hour MVP
 
 ## 1. Overview
 
