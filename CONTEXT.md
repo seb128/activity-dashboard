@@ -91,7 +91,31 @@ config.yaml → load → [4 adapters fetch in parallel via ThreadPoolExecutor]
 - ✅ Brainstorming complete.
 - ✅ Design spec written, self-reviewed, committed.
 - ✅ Spec reviewed and approved by Sebastien.
-- ⏭️ **Next:** invoke `writing-plans` skill to translate the spec into an executable implementation plan.
+- ✅ Implementation plan written (`docs/superpowers/plans/2026-05-13-activity-dashboard.md`) — 12 TDD tasks, complete code in every step.
+- ✅ Execution mode chosen: **Subagent-Driven** (fresh subagent per task, review between tasks).
+- ⏸️ **Paused** before kicking off execution. Sebastien is at lunch; will confirm when ready to start.
+- ⏭️ **Next:** on confirmation, invoke `superpowers:subagent-driven-development` skill to execute Task 1 of the plan.
+
+## Resume instructions (for any future Claude session)
+If this conversation died and you're picking up cold:
+
+1. **Read these files first**, in order:
+   - `CONTEXT.md` (this file) — overall context and decisions.
+   - `docs/superpowers/specs/2026-05-13-activity-dashboard-design.md` — the design spec.
+   - `docs/superpowers/plans/2026-05-13-activity-dashboard.md` — the 12-task execution plan.
+2. **Check the repo state:** `git log --oneline` to see how many tasks are already done. Each task ends in a commit with a `feat(...)`, `scaffold:`, or `polish:` prefix. Count those and you'll know which Task # to start from.
+3. **Ask Sebastien for confirmation** before kicking off subagents (he asked to be in control of when execution starts).
+4. **When green-lit:** invoke `superpowers:subagent-driven-development` skill. Dispatch one subagent per task, in plan order, reviewing between tasks. Don't batch.
+
+## Latest commits
+```
+99d210c Add implementation plan: 12 TDD tasks for v1
+6691971 Restore spec author line; mark spec approved in CONTEXT.md
+ff8c610 Genericize spec and CONTEXT.md for sharing
+c53f591 Update CONTEXT.md repo path after moving under hackhathon dir
+3b9432d Add CONTEXT.md tracking design decisions
+f9bc139 Initial commit: design spec for activity-dashboard
+```
 
 ## Author / operator distinction
 - **Author of spec & commits:** Sebastien Bacher (designing the tool with Claude).
