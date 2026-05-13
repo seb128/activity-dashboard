@@ -93,8 +93,10 @@ config.yaml → load → [4 adapters fetch in parallel via ThreadPoolExecutor]
 - ✅ Implementation plan written (`docs/superpowers/plans/2026-05-13-activity-dashboard.md`) — 12 TDD tasks.
 - ✅ **All 12 implementation tasks complete.** Subagent-driven execution with two-stage review (spec compliance + code quality) per task.
 - ✅ Final holistic review done.
-- 🟢 **64/64 tests passing.**
-- ⏭️ **Next:** Sebastien is reviewing the four issues surfaced by the final review (see "Known gaps" below). Decisions pending on whether to fix.
+- 🟢 **71/71 tests passing** (was 64 after task 12; +6 for LP-reviewer fix, +1 for scrape-isolation test).
+- ✅ Spec gap #2 (Jira reporter) closed as spec correction (assignee-only is the desired behavior).
+- ✅ Spec gap #1 (Launchpad reviewer MPs) closed with `+activereviews` scrape (`d68247a` + `c964ba1`).
+- ⏭️ **Next:** likely demo prep / smoke-test against real APIs.
 
 ## Implementation summary
 
@@ -134,7 +136,7 @@ These are spec items the plan **didn't propagate to code**. The dashboard works 
 
 | # | Severity | Gap | Spec ref | Cost |
 |---|---|---|---|---|
-| 1 | Important | **Launchpad MPs where subject is *reviewer*** are not fetched. Adapter calls `getMergeProposals(...)` which returns only proposals the subject *registered*. Rules engine also doesn't differentiate MP reviewer role. | §7.2, §8 | ~20 lines (extra adapter query + rules branch) |
+| ~~1~~ | resolved | ~~Launchpad reviewer MPs~~ — closed in `d68247a` + `c964ba1` by scraping `https://code.launchpad.net/~<id>/+activereviews` (works around LP API gap for Git MPs, [bug 1979817](https://bugs.launchpad.net/launchpad/+bug/1979817)). Adopted from Canonical's existing scraping pattern. Rules engine routes reviewer-role MPs → NEEDS_ATTENTION. Scrape failures isolated so they don't drop launchpadlib data. | §7.2, §8 | done |
 | ~~2~~ | resolved | ~~Jira `reporter` query~~ — spec corrected: assignee-only is the desired behavior (we want the subject's *current work*, not historical filings). No code change needed. | §7.3 (spec updated) | done |
 | 3 | Minor (latent) | **Source badge label** in top-tier bucket template uses `source_labels[it.source]`, would render blank for unknown source. All 5 current sources are mapped so not observable today. | n/a (defensive only) | 1 line |
 | 4 | Minor / informational | Silent fallback to anonymous GitHub when token file is configured-but-missing — no warning. | n/a | ~3 lines |
