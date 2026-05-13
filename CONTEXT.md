@@ -29,8 +29,8 @@ Works for both personal week-in-review and 1-1 preparation — same code, differ
 ### Sources — v1 scope (option B')
 **Live (4 sources):**
 - **GitHub** — PRs authored / requested for review, with review state and last activity.
-- **Launchpad** — bugs and merge proposals authored/assigned/in-review by subject.
-- **Jira** — board tickets where subject is assignee, recent activity.
+- **Launchpad** — bugs and authored merge proposals via `launchpadlib`; reviewer-side MPs (incl. Git repos) via scraping `+activereviews`.
+- **Jira** — board tickets where subject is assignee, plus an optional second query for stale-in-pulse tickets (config: `credentials.jira.pulse_jql` + `rules.needs_attention.pulse_stale_days`).
 - **Google Docs 1-1 notes** — *one specific document per subject*, referenced in config. Parses two sections:
   - "For next week" (fresh commitments)
   - "Carried over from last week" (implicitly stalled)
@@ -100,10 +100,12 @@ config.yaml → load → [4 adapters fetch in parallel via ThreadPoolExecutor]
 - ✅ Implementation plan written (`docs/superpowers/plans/2026-05-13-activity-dashboard.md`) — 12 TDD tasks.
 - ✅ **All 12 implementation tasks complete.** Subagent-driven execution with two-stage review (spec compliance + code quality) per task.
 - ✅ Final holistic review done.
-- 🟢 **71/71 tests passing** (was 64 after task 12; +6 for LP-reviewer fix, +1 for scrape-isolation test).
+- 🟢 **82/82 tests passing** (12-task baseline 64, +7 LP-reviewer fix, +11 Jira pulse-stale).
 - ✅ Spec gap #2 (Jira reporter) closed as spec correction (assignee-only is the desired behavior).
 - ✅ Spec gap #1 (Launchpad reviewer MPs) closed with `+activereviews` scrape (`d68247a` + `c964ba1`).
-- ⏭️ **Next:** likely demo prep / smoke-test against real APIs.
+- ✅ **Live smoke-tested against real APIs** by Sebastien. Findings drove: Jira logging improvements (`41a1e1b`, `d704f02`), template redesign (`c17ce64`), and Jira pulse-stale feature (`fb4f840`).
+- ✅ Template redesign: card-based bucket layout, source-letter marks, hero header, per-section dividers.
+- ⏭️ **Next:** demo prep — re-run with real data + DCR pulse JQL and verify output.
 
 ## Implementation summary
 
@@ -130,7 +132,7 @@ activity-dashboard/
 │       ├── jira.py           live
 │       ├── gdocs.py          live (parses "For next week" + "Carried over")
 │       └── gmail.py          scaffold only (raises NotImplementedError)
-└── tests/                    (71 tests across all modules)
+└── tests/                    (82 tests across all modules)
 ```
 
 ### Bugs caught and fixed during reviews
@@ -138,6 +140,11 @@ activity-dashboard/
 2. **`render.py`:** autoescape was silently disabled because `select_autoescape(["html"])` doesn't match `.j2` extension — real XSS hole on item titles → fixed to `select_autoescape(["html", "j2"])` (`c04dd10`).
 3. **`render.py`:** `SOURCE_LABELS[name]` would `KeyError` on unknown source → defensive `.get(name, name)` (`c04dd10`).
 4. **`render.py`:** `Path.write_text(html)` used locale-default encoding → explicit `encoding="utf-8"` (`80959da`).
+
+### Improvements from real-world smoke testing
+1. **Diagnostic logging upgraded** (`41a1e1b`, `d704f02`): orchestrator log now shows exception type+repr (was empty for `HTTPError('')`); Jira adapter wraps non-2xx responses and surfaces HTTP status + body slice + the JQL that failed. With `-v`, also dumps tracebacks at DEBUG.
+2. **Template redesign** (`c17ce64`): card-based buckets with semantic colored borders, smaller letter-mark source chips, hero header with orange accent, two-tier section headings, breathing room throughout.
+3. **Jira pulse-stale feature** (`fb4f840`): optional `credentials.jira.pulse_jql` + `rules.needs_attention.pulse_stale_days` (default 7). When set, the adapter runs a second JQL combining the user's pulse fragment with `assignee = "<email>" AND updated < -<days>d` and tags those items with `raw["stale_in_pulse"]=True`. Rules engine routes them to NEEDS_ATTENTION (after Done check). Failure of the second query logs a warning without dropping first-query results.
 
 ## Known gaps (final review findings)
 
@@ -153,20 +160,20 @@ These are spec items the plan **didn't propagate to code**. The dashboard works 
 Workaround for an immediate demo: pick a subject whose work is primarily author/assignee (not reviewer-heavy).
 
 ## Demo-readiness
-The final reviewer's verdict: **Ready**, with awareness of gaps #1 and #2 above.
+**Ready.** Smoke-tested by Sebastien against real APIs; both Important gaps from the final review are now closed (LP reviewer MPs via scrape; Jira reporter resolved as spec correction). Template redesigned. Pulse-stale feature added on top.
 
 ## Suggested next steps for Sebastien
-1. **Smoke test against real APIs.** Drop tokens into `~/.config/activity-dashboard/`, run `activity-dashboard --subject me`, inspect the HTML.
-2. **Fix the two Important gaps** (#1 LP reviewer MPs, #2 Jira reporter) if they matter for your demo subject.
-3. **Demo prep:** dry-run the report against a few different subjects to catch any visual issues.
+1. **Add `pulse_jql` to your config** (e.g. `project = DCR AND sprint in openSprints()`) and re-run to confirm stale-in-pulse items appear in **Needs attention**.
+2. **Demo prep:** dry-run the report against a couple of subjects (yourself + a direct report) to spot any visual issues.
+3. **Optional polish:** the two latent Minor issues (blank source label fallback in top tier — fixed by render.py `.get()` change earlier; silent GitHub anonymous fallback warning) only matter if someone else runs the tool — defer unless distributing.
 
 ## Resume instructions (for any future Claude session)
 If this conversation died and you're picking up cold:
 
 1. **Read in order:** `CONTEXT.md` (this file), `docs/superpowers/specs/2026-05-13-activity-dashboard-design.md`, `docs/superpowers/plans/2026-05-13-activity-dashboard.md`.
-2. **Verify state:** `cd /home/ubuntu/hackhathon/activity-dashboard && make test-quick` (expect 71 passing). Or `uv run pytest -q`.
+2. **Verify state:** `cd /home/ubuntu/hackhathon/activity-dashboard && make test-quick` (expect 82 passing). Or `uv run pytest -q`.
 3. **Check `git log --oneline`** — should match the "Recent commits" section below.
-4. **Ask Sebastien what to work on next.** Most likely: smoke-test against real APIs (drop tokens, `make run SUBJECT=me`), polish, or demo prep.
+4. **Ask Sebastien what to work on next.** Most likely: tweak the report, demo prep, or extend a source.
 
 ## Recent commits (most recent first)
 ```

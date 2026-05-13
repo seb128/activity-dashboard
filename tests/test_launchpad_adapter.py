@@ -201,3 +201,33 @@ def test_fetch_reviewer_scrape_failure_does_not_destroy_lp_data(caplog):
     assert reviewer_items == []
     # Warning was logged
     assert any("scrape reviewer MPs" in rec.message for rec in caplog.records)
+
+
+def test_merged_mp_outside_window_is_excluded():
+    """Completed MPs older than window_days must not appear in the results."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    old_mp = FakeMP(
+        "Old merged MP",
+        "https://code.launchpad.net/~alice-lp/x/+merge/99",
+        "Merged",
+        now - timedelta(days=30),
+    )
+    client = FakeLaunchpad({"alice-lp": FakePerson(merge_proposals=[old_mp])})
+    items = lp_adapter.fetch(_subject(), _settings(), _client=client, _http_get=_no_http_get)
+    assert not any(i.title == "Old merged MP" for i in items)
+
+
+def test_open_mp_outside_window_is_included():
+    """Open MPs older than window_days must still be included (stale = Needs Attention)."""
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    stale_mp = FakeMP(
+        "Stale open MP",
+        "https://code.launchpad.net/~alice-lp/x/+merge/98",
+        "Needs review",
+        now - timedelta(days=30),
+    )
+    client = FakeLaunchpad({"alice-lp": FakePerson(merge_proposals=[stale_mp])})
+    items = lp_adapter.fetch(_subject(), _settings(), _client=client, _http_get=_no_http_get)
+    assert any(i.title == "Stale open MP" for i in items)

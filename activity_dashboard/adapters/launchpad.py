@@ -93,10 +93,16 @@ def fetch(subject, settings, *, _client=None, _http_get=None) -> list[Item]:
             raw={"bug_title": bug.title},
         ))
 
+    _MP_DONE = {"Merged", "Rejected", "Superseded"}
+
     # Merge proposals
     for mp in person.getMergeProposals(status=["Work in progress", "Needs review", "Approved",
                                                 "Rejected", "Merged"]):
-        last = mp.date_review_requested or mp.date_created
+        last = getattr(mp, "date_merged", None) or mp.date_review_requested or mp.date_created
+        # Skip completed MPs that fall outside the reporting window; open/awaiting-review
+        # MPs are always included so stale ones correctly surface in Needs Attention.
+        if mp.queue_status in _MP_DONE and last < cutoff:
+            continue
         title = mp.description_or_fallback() if hasattr(mp, "description_or_fallback") else mp.web_link
         items.append(Item(
             source=NAME,

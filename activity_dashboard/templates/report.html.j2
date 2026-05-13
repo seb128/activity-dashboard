@@ -98,30 +98,52 @@
     }
     .empty { color: var(--muted); font-style: italic; font-size: 0.85rem; padding: 0.5rem 0; }
 
-    /* Per-source feed */
+    /* Per-source feed: match bucket style, one per row */
     .source-feed {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 1rem; margin-bottom: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
     }
-    @media (max-width: 1024px) { .source-feed { grid-template-columns: 1fr 1fr; } }
-    @media (max-width: 640px)  { .source-feed { grid-template-columns: 1fr; } }
     .source-panel {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 8px; padding: 1rem 1.15rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
     }
     .source-panel h3 {
-      margin: 0 0 0.6rem;
-      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;
-      color: var(--muted); font-weight: 600;
+      margin: 0 0 0.8rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .source-panel .panel-count {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-left: 0.5rem;
+      font-variant-numeric: tabular-nums;
     }
     .source-item {
-      padding: 0.45rem 0; border-bottom: 1px solid var(--border-light);
-      font-size: 0.85rem; line-height: 1.4;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 0.95rem;
+      line-height: 1.4;
     }
     .source-item:last-child { border-bottom: none; }
     .source-item a { color: var(--ink); text-decoration: none; font-weight: 500; }
     .source-item a:hover { color: var(--active); text-decoration: underline; }
-    .source-status { color: var(--muted); font-size: 0.72rem; margin-left: 0.4rem; }
+    .source-status { color: var(--muted); font-size: 0.8rem; margin-left: 0.4rem; }
 
     /* 1-1 notes panel */
     .one-on-one {
@@ -152,12 +174,19 @@
     <div class="accent-line"></div>
     <h1>{{ subject.display_name }}</h1>
     <p class="subtitle">Activity report · Generated {{ generated_at }}</p>
+    <p class="description" style="margin-top:1.2rem; color: var(--muted); font-size: 1.05rem; width: 100%;">
+      Shows your recent activities and assignments across GitHub, Launchpad, Jira, and 1-1 notes — all in one place. Use it for week-in-review, 1-1 prep, or to spot what needs your attention.
+    </p>
   </header>
 
   <div class="container">
     <h2 class="section-heading">At a glance</h2>
     <section class="bucket-grid">
-      {% for bucket_name, bucket_label in buckets %}
+      {% for bucket_name, bucket_label in [
+        ('active', buckets[1][1]),
+        ('needs_attention', buckets[2][1]),
+        ('done', buckets[0][1])
+      ] %}
       {% set items = grouped_by_bucket.get(bucket_name, []) %}
       <div class="bucket {{ bucket_name }}">
         <div class="bucket-header">
@@ -190,7 +219,7 @@
     <section class="source-feed">
       {% for source_name, source_label in active_sources %}
       <div class="source-panel">
-        <h3>{{ source_label }}</h3>
+        <h3>{{ source_label }}<span class="panel-count">{{ (results.get(source_name) | length) if (results.get(source_name) is iterable and results.get(source_name) is not string) else '' }}</span></h3>
         {% set value = results.get(source_name) %}
         {% if value is iterable and value is not string %}
           {% if value %}
