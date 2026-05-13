@@ -68,6 +68,15 @@ def _subject():
     )
 
 
+class _NoOpResponse:
+    text = "<html></html>"
+    def raise_for_status(self): pass
+
+
+def _no_http_get(*args, **kwargs):
+    return _NoOpResponse()
+
+
 def test_name_constant():
     assert lp_adapter.NAME == "launchpad"
 
@@ -77,7 +86,7 @@ def test_fetch_bugs():
                   datetime(2026, 5, 10, tzinfo=timezone.utc))
     task = FakeBugTask(bug, "In Progress", datetime(2026, 5, 10, tzinfo=timezone.utc))
     client = FakeLaunchpad({"alice-lp": FakePerson(bug_tasks=[task])})
-    items = lp_adapter.fetch(_subject(), _settings(), _client=client)
+    items = lp_adapter.fetch(_subject(), _settings(), _client=client, _http_get=_no_http_get)
     bugs = [i for i in items if i.kind == "bug"]
     assert len(bugs) == 1
     assert bugs[0].title == "Crash on startup"
@@ -89,7 +98,7 @@ def test_fetch_merge_proposals():
     mp = FakeMP("Land new feature", "https://code.launchpad.net/~alice-lp/x/+merge/1",
                 "Needs review", datetime(2026, 5, 11, tzinfo=timezone.utc))
     client = FakeLaunchpad({"alice-lp": FakePerson(merge_proposals=[mp])})
-    items = lp_adapter.fetch(_subject(), _settings(), _client=client)
+    items = lp_adapter.fetch(_subject(), _settings(), _client=client, _http_get=_no_http_get)
     mps = [i for i in items if i.kind == "mp"]
     assert len(mps) == 1
     assert mps[0].title.startswith("Land new feature")
@@ -99,5 +108,69 @@ def test_fetch_merge_proposals():
 
 def test_fetch_empty():
     client = FakeLaunchpad({"alice-lp": FakePerson()})
-    items = lp_adapter.fetch(_subject(), _settings(), _client=client)
+    items = lp_adapter.fetch(_subject(), _settings(), _client=client, _http_get=_no_http_get)
     assert items == []
+
+
+# Sample HTML matching the structure of a Launchpad +activereviews page:
+# two reviewer-queue sections (with MP links we should capture) and one
+# unrelated section (with an MP link we should ignore).
+_SAMPLE_ACTIVE_REVIEWS_HTML = """
+<html><body><table>
+  <tr><td class="section-heading">Requested reviews by alice-lp</td></tr>
+  <tr><td><a href="/~bob/foo/+merge/12345">Land feature foo</a></td></tr>
+  <tr><td><a href="/~carol/bar/+merge/12346">Refactor bar</a></td></tr>
+  <tr><td class="section-heading">Reviews alice-lp can do</td></tr>
+  <tr><td><a href="/~dave/baz/+merge/22222">Optimize baz</a></td></tr>
+  <tr><td class="section-heading">Mine to land</td></tr>
+  <tr><td><a href="/~alice-lp/own/+merge/33333">Ignored - my own MP</a></td></tr>
+</table></body></html>
+"""
+
+
+def test_parse_active_reviews_extracts_mps_in_reviewer_sections():
+    items = lp_adapter._parse_active_reviews(_SAMPLE_ACTIVE_REVIEWS_HTML)
+    titles = [i.title for i in items]
+    assert "Land feature foo" in titles
+    assert "Refactor bar" in titles
+    assert "Optimize baz" in titles
+    # MP under "Mine to land" must NOT appear.
+    assert "Ignored - my own MP" not in titles
+
+
+def test_parse_active_reviews_items_have_reviewer_role_and_needs_review_status():
+    items = lp_adapter._parse_active_reviews(_SAMPLE_ACTIVE_REVIEWS_HTML)
+    assert all(i.source == "launchpad" for i in items)
+    assert all(i.kind == "mp" for i in items)
+    assert all(i.subject_role == "reviewer" for i in items)
+    assert all(i.status == "Needs review" for i in items)
+
+
+def test_parse_active_reviews_url_is_absolute():
+    items = lp_adapter._parse_active_reviews(_SAMPLE_ACTIVE_REVIEWS_HTML)
+    foo = next(i for i in items if i.title == "Land feature foo")
+    assert foo.url == "https://code.launchpad.net/~bob/foo/+merge/12345"
+
+
+def test_parse_active_reviews_empty_html():
+    assert lp_adapter._parse_active_reviews("<html></html>") == []
+
+
+def test_fetch_includes_reviewer_mps(monkeypatch):
+    """End-to-end: fetch() composes registered MPs + reviewer MPs."""
+    class FakeResponse:
+        text = _SAMPLE_ACTIVE_REVIEWS_HTML
+        def raise_for_status(self): pass
+    captured = {}
+    def fake_http_get(url, timeout=None):
+        captured["url"] = url
+        return FakeResponse()
+
+    client = FakeLaunchpad({"alice-lp": FakePerson()})  # no registered MPs, no bugs
+    items = lp_adapter.fetch(_subject(), _settings(), _client=client, _http_get=fake_http_get)
+
+    # URL was the expected +activereviews page
+    assert captured["url"] == "https://code.launchpad.net/~alice-lp/+activereviews"
+    # Reviewer MPs were extracted
+    reviewer_mps = [i for i in items if i.subject_role == "reviewer"]
+    assert len(reviewer_mps) == 3

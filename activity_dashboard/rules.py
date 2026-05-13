@@ -57,6 +57,8 @@ def _bucket_for_launchpad(item: Item, rules: Rules, now: datetime) -> Bucket:
     if item.kind == "mp":
         if item.status in LAUNCHPAD_MP_DONE:
             return Bucket.DONE
+        if item.subject_role == "reviewer":
+            return Bucket.NEEDS_ATTENTION
         return Bucket.ACTIVE
     # bug
     if item.status in LAUNCHPAD_BUG_DONE:

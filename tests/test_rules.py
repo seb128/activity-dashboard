@@ -126,3 +126,11 @@ def test_launchpad_mp_needs_review_is_active():
                subject_role="author",
                last_activity_at=_now() - timedelta(days=1))
     assert assign_bucket(it, _settings(), _now()) == Bucket.ACTIVE
+
+
+def test_launchpad_mp_reviewer_role_is_needs_attention():
+    """An MP awaiting the subject's review goes to Needs attention."""
+    it = _item(source="launchpad", kind="mp", status="Needs review",
+               subject_role="reviewer",
+               last_activity_at=_now() - timedelta(hours=2))
+    assert assign_bucket(it, _settings(), _now()) == Bucket.NEEDS_ATTENTION
